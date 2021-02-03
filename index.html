@@ -194,7 +194,27 @@
           { semester: '大二上', grades: '缓考', credits: 3, name: '模拟电子技术' }
         ]
       }
+      
+      /**
+       * 库命名空间
+       */
+      const lib = {
+        /**
+         * 从 HTML 字符串创建 DOM 元素
+         * 输入的 HTML 字符串要求最外层只有一个节点，否则仅返回第一个节点
+         * @returns { HTMLElement }
+         * @param { string } string
+         */
+        createElementFrom: (string) => {
+          const context = document.createElement('div')
+          context.innerHTML = string
+          return context.children[0]
+        }
+      }
 
+      /**
+       * 组件命名空间
+       */
       const Components = {
         /**
          * @returns { HTMLElement }
@@ -217,10 +237,15 @@
          * pure
          */
         Main: function (db) {
-          const comp_Main = document.createElement('main')
           const comp_Semesters = db.semester.map(semester => Components.Semester(semester, db.class.filter(classItem => classItem.semester === semester.ID), db.grades))
-          comp_Semesters.reverse().forEach(item => { comp_Main.appendChild(item) });
-          return comp_Main
+          
+          return lib.createElementFrom(
+            `
+            <main>
+              ${comp_Semesters.map(item => item.outerHTML).reverse().join('')}
+            </main>
+            `
+          )
         },
         /** 
          * @returns { HTMLElement }
@@ -230,11 +255,14 @@
          * pure
          */
         Semester: function (semester, classList, gradesList) {
-          const comp_Semester = document.createElement('div')
-          comp_Semester.setAttribute('class', 'semester-card')
-          comp_Semester.appendChild(Components.SemesterTitleBar(semester))
-          comp_Semester.appendChild(Components.ClassList(classList, gradesList))
-          return comp_Semester
+          return lib.createElementFrom(
+            `
+            <div class="semester-card">
+              ${Components.SemesterTitleBar(semester).outerHTML}
+              ${Components.ClassList(classList, gradesList).outerHTML}
+            </div>
+            `
+          )
         },
         /**
          * @returns { HTMLElement }
@@ -242,46 +270,15 @@
          * pure
          */
         SemesterTitleBar: function (semester) {
-          const comp_SemesterTitleBar = document.createElement('div')
-          comp_SemesterTitleBar.setAttribute('class', 'semester-title-bar')
-
-          const comp_Title = document.createElement('h1')
-          comp_Title.appendChild(document.createTextNode(semester.name))
-          
-          const comp_SelectButton = document.createElement('button')
-          comp_SelectButton.appendChild(document.createTextNode('勾选学期'))
-          comp_SelectButton.onclick = () => { EventsCB.checkSemester(semester.ID) }
-
-          const comp_OnlySelectButton = document.createElement('button')
-          comp_OnlySelectButton.appendChild(document.createTextNode('仅本学期'))
-          comp_OnlySelectButton.onclick = () => { EventsCB.onlyCheckSemester(semester.ID) }
-
-          comp_SemesterTitleBar.appendChild(comp_Title)
-          comp_SemesterTitleBar.append(comp_SelectButton)
-          comp_SemesterTitleBar.append(comp_OnlySelectButton)
-
-          return comp_SemesterTitleBar
-        },
-        /**
-         * @returns { HTMLElement }
-         * @param { Object } semester
-         * pure
-         */
-        SemesterOptions: function (semester) {
-          const comp_SemesterOptions = document.createElement('div')
-
-          const comp_SelectButton = document.createElement('button')
-          comp_SelectButton.appendChild(document.createTextNode('勾选学期'))
-          comp_SelectButton.onclick = () => { EventsCB.checkSemester(semester.ID) }
-
-          const comp_OnlySelectButton = document.createElement('button')
-          comp_OnlySelectButton.appendChild(document.createTextNode('仅本学期'))
-          comp_OnlySelectButton.onclick = () => { EventsCB.onlyCheckSemester(semester.ID) }
-
-          comp_SemesterOptions.append(comp_SelectButton)
-          comp_SemesterOptions.append(comp_OnlySelectButton)
-
-          return comp_SemesterOptions
+          return lib.createElementFrom(
+            `
+            <div class="semester-title-bar">
+              <h1>${semester.name}</h1>
+              <button onclick="EventsCB.checkSemester('${semester.ID}')">勾选学期</button>
+              <button onclick="EventsCB.onlyCheckSemester('${semester.ID}')">仅本学期</button>
+            </div>
+            `
+          )
         },
         /**
          * @returns { HTMLElement }
@@ -290,11 +287,16 @@
          * pure
          */
         ClassList: function (classList, gradesList) {
-          const comp_ClassList = document.createElement('ul')
-          comp_ClassList.className = 'class-list'
-          classList.sort((classA, classB) => Methods.descend(classA, classB, gradesList))
-          classList.map(item => Components.ClassItem(item, gradesList)).forEach(item => comp_ClassList.appendChild(item))
-          return comp_ClassList
+          const temp_classList = Array.from(classList).sort((classA, classB) => Methods.descend(classA, classB, gradesList))
+          const classItems = temp_classList.map(item => Components.ClassItem(item, gradesList))
+
+          return lib.createElementFrom(
+            `
+            <ul class="class-list">
+              ${classItems.map(item => item.outerHTML).join('')}
+            </ul>
+            `
+          )
         },
         /**
          * @returns { HTMLElement }
@@ -309,42 +311,29 @@
           const grades = classItem.grades
           const points = gradesList.filter(item => item.name === classItem.grades)[0].points
 
-          const comp_ClassItem = document.createElement('li')
-          comp_ClassItem.className = 'class-item'
-
-          const comp_NameSpan = document.createElement('span')
-          comp_NameSpan.appendChild(document.createTextNode(name))
-          comp_NameSpan.className = 'class-name'
-
-          const comp_CreditsSpan = document.createElement('span')
-          comp_CreditsSpan.appendChild(document.createTextNode(credits))
-          comp_CreditsSpan.className = 'class-credits'
-
-          const comp_GradesSpan = document.createElement('span')
-          comp_GradesSpan.appendChild(document.createTextNode(grades))
-          comp_GradesSpan.className = 'class-grades'
-          
-          const comp_PointsSpan = document.createElement('span')
-          comp_PointsSpan.appendChild(document.createTextNode(points))
-          comp_PointsSpan.className = 'class-points'
-
-          const comp_CheckBox = document.createElement('input')
-          comp_CheckBox.className = 'class-checkbox'
-          comp_CheckBox.type = 'checkbox'
-          comp_CheckBox.setAttribute('credits', credits)
-          comp_CheckBox.setAttribute('points', points)
-          comp_CheckBox.setAttribute('semester', semester)
-          comp_CheckBox.onchange = EventsCB.refreshAvgPoints
-
-          comp_ClassItem.appendChild(comp_NameSpan)
-          comp_ClassItem.appendChild(comp_CreditsSpan)
-          comp_ClassItem.appendChild(comp_GradesSpan)
-          comp_ClassItem.appendChild(comp_PointsSpan)
-          comp_ClassItem.appendChild(comp_CheckBox)
-
-          return comp_ClassItem
+          return lib.createElementFrom(
+            `
+            <li class="class-item">
+              <span class="class-name">${name}</span>
+              <span class="class-credits">${credits}</span>
+              <span class="class-grades">${grades}</span>
+              <span class="class-points">${points}</span>
+              <input 
+                class="class-checkbox" 
+                type="checkbox" 
+                credits="${credits}"
+                points="${points}"
+                semester="${semester}"
+                onchange="EventsCB.refreshAvgPoints()"/>
+            </li>
+            `
+          )
         }
       }
+
+      /**
+       * 方法命名空间
+       */
       const Methods = {
         /**
          * @returns { number }
@@ -372,6 +361,9 @@
         }
       }
 
+      /**
+       * 事件回调方法命名空间
+       */
       const EventsCB = {
         /**
          * 渲染页面
@@ -448,7 +440,7 @@
 
       window.onload = () => {
         EventsCB.render()
-        EventsCB.checkSemester(db.semester.reduce((acc, cur) => isNaN(acc) || cur.ID > acc ? cur.ID : acc))
+        EventsCB.checkSemester(db.semester[db.semester.length-1].ID)
       }
 
     </script>
