@@ -114,18 +114,6 @@
     </style>
   </head>
   <body>
-    <div id="shao-ye-de-ji-dian">
-      <header>
-        <div id="header-container">
-          <h1>少爷的绩点</h1>
-          <h2>平均绩点：</h2>
-          <span id="avgPoints"></span>
-          <button onclick="location.reload()">刷新</button>
-          <button onclick="EventsCB.checkAll()">全部勾选</button>
-          <button onclick="EventsCB.checkNone()">全部清除</button>
-        </div>
-      </header>
-    </div>
     <script>
       /**
        * db 对象为关系数据库，每个属性用 Array 模拟数据表，每个数据表包含多个对象表示数据条目
@@ -222,6 +210,25 @@
        * 组件命名空间
        */
       const Components = {
+        ShaoYeDeJiDian: function (db) {
+          return lib.createElementFrom(
+            `
+              <div id="shao-ye-de-ji-dian">
+                <header>
+                  <div id="header-container">
+                    <h1>少爷的绩点</h1>
+                    <h2>平均绩点：</h2>
+                    <span id="avgPoints"></span>
+                    <button onclick="location.reload()">刷新</button>
+                    <button onclick="EventsCB.checkAll()">全部勾选</button>
+                    <button onclick="EventsCB.checkNone()">全部清除</button>
+                  </div>
+                </header>
+                ${Components.Main(db).outerHTML}
+              </div>
+            `
+          )
+        },
         /**
          * @returns { HTMLElement }
          * @param { 
@@ -240,7 +247,6 @@
                       }[]; 
                     }
                   } db
-         * pure
          */
         Main: function (db) {
           const comp_Semesters = db.semester.map(semester => Components.Semester(semester, db.class.filter(classItem => classItem.semester === semester.ID), db.grades))
@@ -258,7 +264,6 @@
          * @param semester
          * @param classList
          * @param gradesList
-         * pure
          */
         Semester: function (semester, classList, gradesList) {
           return lib.createElementFrom(
@@ -273,7 +278,6 @@
         /**
          * @returns { HTMLElement }
          * @param { Object } semester
-         * pure
          */
         SemesterTitleBar: function (semester) {
           return lib.createElementFrom(
@@ -290,7 +294,6 @@
          * @returns { HTMLElement }
          * @param { Array } classList
          * @param { Array } gradesList
-         * pure
          */
         ClassList: function (classList, gradesList) {
           const temp_classList = Array.from(classList).sort((classA, classB) => Methods.descend(classA, classB, gradesList))
@@ -390,12 +393,6 @@
        */
       const EventsCB = {
         /**
-         * 渲染页面
-         */
-        render: function () {
-          document.getElementById('shao-ye-de-ji-dian').appendChild(Components.Main(db))
-        },
-        /**
          * 刷新平均绩点
          */
         refreshAvgPoints: function () {
@@ -486,8 +483,8 @@
       }
 
       window.onload = () => {
-        EventsCB.render()
-        EventsCB.checkSemester(db.semester[db.semester.length-1].ID)
+        document.getElementsByTagName('body')[0].appendChild(Components.ShaoYeDeJiDian(db))
+        EventsCB.checkSemester(db.semester[db.semester.length - 1].ID)
       }
 
     </script>
