@@ -102,8 +102,14 @@
       .class-name{
         flex-grow: 1;
       }
-      .class-grades, .class-credits, .class-points{
+      .class-credits, .class-points{
         width: 64px;
+        text-align: center;
+      }
+      .class-grades{
+        font-size: 16px;
+        padding: 2px;
+        width: 80px;
         text-align: center;
       }
     </style>
@@ -115,6 +121,7 @@
           <h1>少爷的绩点</h1>
           <h2>平均绩点：</h2>
           <span id="avgPoints"></span>
+          <button onclick="location.reload()">刷新</button>
           <button onclick="EventsCB.checkAll()">全部勾选</button>
           <button onclick="EventsCB.checkNone()">全部清除</button>
         </div>
@@ -205,7 +212,7 @@
          * @returns { HTMLElement }
          * @param { string } string
          */
-        createElementFrom: (string) => {
+        createElementFrom: function (string) {
           const context = document.createElement('div')
           context.innerHTML = string
           return context.children[0]
@@ -288,11 +295,22 @@
          */
         ClassList: function (classList, gradesList) {
           const temp_classList = Array.from(classList).sort((classA, classB) => Methods.descend(classA, classB, gradesList))
-          const classItems = temp_classList.map(item => Components.ClassItem(item, gradesList))
+          const classItems = temp_classList.map(item => Components.ClassItem(item, gradesList, false))
 
           return lib.createElementFrom(
             `
             <ul class="class-list">
+              <li class="class-item" style="font-weight: bold">
+                <span class="class-name">课程名</span>
+                <span class="class-credits">学分</span>
+                <span class="class-grades">成绩</span>
+                <span class="class-points">绩点</span>
+                <input 
+                  class="class-checkbox"
+                  type="checkbox"
+                  style="visibility: hidden"
+                  onchange="null"/>
+              </li>
               ${classItems.map(item => item.outerHTML).join('')}
             </ul>
             `
@@ -302,9 +320,10 @@
          * @returns { HTMLElement }
          * @param { Object } classItem
          * @param { Array } gradesList
+         * @param { boolean } isChecked
          * impure
          */
-        ClassItem: function (classItem, gradesList) {
+        ClassItem: function (classItem, gradesList, isChecked) {
           const semester = classItem.semester
           const name = classItem.name
           const credits = classItem.credits
@@ -313,10 +332,15 @@
 
           return lib.createElementFrom(
             `
-            <li class="class-item">
+            <li class="class-item" classItemName="${name}">
               <span class="class-name">${name}</span>
               <span class="class-credits">${credits}</span>
-              <span class="class-grades">${grades}</span>
+              <select 
+                class="class-grades" 
+                classItemName="${name}" 
+                onchange="EventsCB.gradesChange(this)">
+                ${gradesList.map(item => `<option${item.name === grades ? ' selected':''}>${item.name}</option>`).join('')}
+              </select>
               <span class="class-points">${points}</span>
               <input 
                 class="class-checkbox" 
@@ -324,7 +348,8 @@
                 credits="${credits}"
                 points="${points}"
                 semester="${semester}"
-                onchange="EventsCB.refreshAvgPoints()"/>
+                onchange="EventsCB.checkItem(this)"
+                ${isChecked ? 'checked' : ''}/>
             </li>
             `
           )
@@ -376,16 +401,23 @@
          */
         refreshAvgPoints: function () {
           const checkboxList = document.getElementsByClassName('class-checkbox')
-          var sum = 0
-          var creditsSum = 0
+          let sum = 0
+          let creditsSum = 0
           for(var i = 0; i < checkboxList.length; i++){
-            if(checkboxList[i].checked){
+            if(checkboxList[i].checked && checkboxList[i].getAttribute('credits') && checkboxList[i].getAttribute('points')){
               sum += parseFloat(checkboxList[i].getAttribute('credits')) * parseFloat(checkboxList[i].getAttribute('points'))
               creditsSum += parseFloat(checkboxList[i].getAttribute('credits'))
             }
           }
           var avgPoints = sum / creditsSum
           document.getElementById('avgPoints').innerText = Number.isNaN(avgPoints) ? '未勾选' : avgPoints.toFixed(2).toString()
+        },
+        /**
+         * @param { HTMLElement } element
+         */
+        checkItem: function (element) {
+          element.parentElement.setAttribute('isChecked', element.checked.toString())
+          EventsCB.refreshAvgPoints()
         },
         /**
          * 勾选学期
@@ -435,6 +467,22 @@
             checkboxList[i].checked = false
             checkboxList[i].onchange()
           }
+        },
+        /**
+         * @param { HTMLElement } element
+         */
+        gradesChange: function (element) {
+          const classItemName = element.getAttribute('classItemName')
+          const classItemElement = element.parentElement
+          const isChecked = classItemElement.getAttribute('isChecked') === 'true' ? true : false
+          const newGrades = element.selectedOptions[0].value
+          db.class.forEach(item => {
+            if (item.name === classItemName) {
+              item.grades = newGrades
+              element.parentElement.replaceWith(Components.ClassItem(item, db.grades, isChecked))
+            }
+          })
+          EventsCB.refreshAvgPoints()
         }
       }
 
